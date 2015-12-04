@@ -14,6 +14,14 @@
 	(ldir++"x3ds_collections.scd").standardizePath.load;
 	(ldir++"x3ds_main.scd").standardizePath.load;
 	(ldir++"x3ds_GUI.scd").standardizePath.load;
-}
-)
+	(ldir++"x3ds_loopMatrix.scd").standardizePath.load;
+};
 ~x3ds_start.value();
+// ~grainbuff_guiCreator.value(3, "GrainBuff", ~loboMain);
+~x3d_guiCreator.value("x3d Looper", ~loboMain);
+~tapTempoGuiCreator.value("", ~loboMain);
+// ~lobo_score.value("score",~loboMain, Color.black);
+~x3d_loops_win_maker.value;
+~startup.value();
+// ~x3d_externalSample.value_(1);
+)

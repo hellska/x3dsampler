@@ -1,16 +1,14 @@
 // Use With Junxion Software and the file x3dLoopControl.j4xml
 // put the subfolder name you want
-~changeFolder.value("industr", "wav");
-~changeFolder.value("20141026", "aiff");
-~changeFolder.value("20150325", "aiff");
+// ~changeFolder.value("industr", "wav");
+// ~changeFolder.value("20141026", "aiff");
+// ~changeFolder.value("20150325", "aiff");
 // restart interpreter and quit server
 // thisProcess.recompile;
 // boot the local server
 // s.boot;
 // first of all load all needed Bus and variables [[[ONLY ONCE]]]
-(
 ///////// Global Variables
-~startup = true; // turn to false after startup
 ~currentFolder = "date +\"%Y%m%d\"".unixCmdGetStdOutLines;
 ~currentFolder = "~/x3dLooper/"++~currentFolder[0]++"/";
 ~recFile = ~currentFolder++"x3dL_1.aiff";
@@ -26,7 +24,6 @@ if ( File.exists(~currentFolder.standardizePath) )
 // other startup values
 ~startPos = 0;
 ~panpot = 0;
-~currentSampleNo = 0;
 ~currentRecNo = 1;
 ///////// Audio Bus
 ~input = Bus.audio(s, 1);
@@ -80,23 +77,36 @@ SynthDef(\rec, {arg bufnum, inbus;
     DiskOut.ar(bufnum, source);
 }).send(s);
 // this will play it back mono file (default panpot center)
-SynthDef(\play, {| outBus = 0, bufnum, start = 0, loop = 0, panpot = 0, attack = 0.01, decay = 0.3, time = 0.1 |
-	var source, out, env, envdur;
-	envdur = start / 44100 - 0.31;
-	env = Env.asr(attackTime:0.02,sustainLevel:1,releaseTime:envdur,curve:\lin);
+SynthDef(\play, {| outBus = 0, bufnum, start = 0, loop = 0, panpot = 0, attack = 0.003, decay = 0.003, time = 0.1 |
+	var source, out;
 	source = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), 1, start, loop, doneAction:2) *
-	EnvGen.kr(Env.linen(attack, envdur, decay));
+	EnvGen.kr(Env.linen(attack, time, decay));
 	out = Pan2.ar(source, panpot);
     Out.ar(outBus, out)
 }).send(s);
+SynthDef(\playLoop, {| outBus = 0, bufnum, start = 0, loop = 0, panpot = 0 |
+	var source, out, env, envdur;
+	envdur = 0.5;
+	env = Env.asr(attackTime:0.02,sustainLevel:1,releaseTime:envdur,curve:\lin);
+	source = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), 1, start, loop, doneAction:2) *
+	EnvGen.ar(env);
+	out = Pan2.ar(source,panpot);
+    Out.ar(outBus, out)
+}).send(s);
 // 4 channels player
-SynthDef(\play4, {| outBus = 0, bufnum, start = 0, loop = 0, xpos = 0, ypos = 0 |
+SynthDef(\play4, {| outBus = 0, bufnum, start = 0, loop = 0, xpos = 0, ypos = 0, attack = 0.003, decay = 0.003, time = 0.1|
+	var source, out;
+	source = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), 1, start, loop, doneAction:2) *
+	EnvGen.kr(Env.linen(attack, time, decay));
+	out = Pan4.ar(source,xpos,ypos);
+    Out.ar(outBus, out)
+}).send(s);
+SynthDef(\play4Loop, {| outBus = 0, bufnum, start = 0, loop = 0, xpos = 0, ypos = 0 |
 	var source, out, env, envdur;
 	envdur = start / 44100 - 0.02 - 0.5;
 	env = Env.asr(attackTime:0.02,sustainLevel:1,releaseTime:envdur,curve:\lin);
 	source = PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), 1, start, loop, doneAction:2) *
 	EnvGen.ar(env);
-	//out = Pan2.ar(source, panpot);
 	out = Pan4.ar(source,xpos,ypos);
     Out.ar(outBus, out)
 }).send(s);
@@ -165,11 +175,11 @@ SynthDef.new(\granulaSample, {
 };
 ~play_array = Array.fill(25,0);
 ~play_array_element = 0;
-~play = {|buffer, startPos|
+~play = {|buffer, startPos, time|
 	if (~setup==2){
 		if (~loop==1) { // behaviour when loop is set
 			if (~play_array_element<~x3d_loop_number) {
-				~play_array.put(~play_array_element,Synth.new(\play, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
+				~play_array.put(~play_array_element,Synth.new(\playLoop, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
 				{ ~x3d_loop_buttons_array[~play_array_element].value_(1);
 					~play_array_element = ~play_array_element + 1; }.defer;
 				"added new element".postln;
@@ -177,7 +187,7 @@ SynthDef.new(\granulaSample, {
 				"No other loop permitted!".postln;
 			};
 		} { // behaviour when loop is switched off
-			Synth.new(\play, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead);
+			Synth.new(\play, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop, \time, time],~sampleGroup, addAction: \addToHead);
 		};
 	};
 	if (~setup==4){
@@ -192,17 +202,11 @@ SynthDef.new(\granulaSample, {
 // Joystik controlled looper functions via OSC protocol
 OSCdef(\play, {|msg, time, addr, port|
 	if (msg[1]==1) {
-		~play.value(~playBuff, ~startPos);
-/*		switch (~currentSampleNo)
-		{0} { ~play.value(~playBuff, ~startPos) }
-		{1} { ~play.value(~playBuff1, ~startPos) }
-		{2} { ~play.value(~playBuff2, ~startPos) }
-		{3} { ~play.value(~playBuff3, ~startPos) }
-		{4} { ~play.value(~playBuff4, ~startPos) }
-		{5} { ~play.value(~playBuff5, ~startPos) }
-		{6} { ~play.value(~playBuff6, ~startPos) };
-*/
-		// ("play current sample: "++~currentFile).postln
+		var time;
+		time = (~playBuff.numFrames - ~startPos) / 44100;
+		time = time * ~timescale;
+		time.postln;
+		~play.value(~playBuff, ~startPos, time);
 	};
  },
 	'/jXcontrol/1'
@@ -230,18 +234,8 @@ OSCdef(\rec, {|msg, time, addr, port|
 OSCdef(\startPos, {|msg, time, addr, port|
 	if (~sliderDelay==0){
 		~startPos = (msg[1] * ~playBuff.numFrames).floor.asInt;
-/*		switch (~currentSampleNo)
-		{0} { ~startPos = (msg[1] * ~playBuff.numFrames).floor.asInt }
-		{1} { ~startPos = (msg[1] * ~playBuff1.numFrames).floor.asInt }
-		{2} { ~startPos = (msg[1] * ~playBuff2.numFrames).floor.asInt }
-		{3} { ~startPos = (msg[1] * ~playBuff3.numFrames).floor.asInt }
-		{4} { ~startPos = (msg[1] * ~playBuff4.numFrames).floor.asInt }
-		{5} { ~startPos = (msg[1] * ~playBuff5.numFrames).floor.asInt }
-		{6} { ~startPos = (msg[1] * ~playBuff6.numFrames).floor.asInt };
-*/
 		// set the cursor of the viewer
 		~cursorBus.set(msg[1]);
-		~startPos.postln;
 	}
 	},
 	'/jXcontrol/3'
@@ -262,6 +256,7 @@ OSCdef(\panpot, {|msg, time, addr, port|
 ~mulPitch = 2.5;
 OSCdef(\pitch, {|msg, time, addr, port|
 	~pitchRatio.set(msg[1] * ~mulPitch + ~minPitch);
+	~timescale = msg[1];
 	// (msg[1] * ~mulPitch + ~minPitch).postln;
 }, '/jXcontrol/Zrotation');
 // receive slider values
@@ -270,16 +265,6 @@ OSCdef(\deltime, {|msg, time, addr, port|
 		~delTime.set(msg[1] * ~maxDelTime + 0.02);
 	} {
 		~startPos = (msg[1] * ~playBuff.numFrames).floor.asInt;
-/*
-		switch (~currentSampleNo)
-		{0} { ~startPos = (msg[1] * ~playBuff.numFrames).floor.asInt }
-		{1} { ~startPos = (msg[1] * ~playBuff1.numFrames).floor.asInt }
-		{2} { ~startPos = (msg[1] * ~playBuff2.numFrames).floor.asInt }
-		{3} { ~startPos = (msg[1] * ~playBuff3.numFrames).floor.asInt }
-		{4} { ~startPos = (msg[1] * ~playBuff4.numFrames).floor.asInt }
-		{5} { ~startPos = (msg[1] * ~playBuff5.numFrames).floor.asInt }
-		{6} { ~startPos = (msg[1] * ~playBuff6.numFrames).floor.asInt };
-*/
 		// set the cursor of the viewer
 		~cursorBus.set(msg[1]);
 	}
@@ -287,7 +272,7 @@ OSCdef(\deltime, {|msg, time, addr, port|
 }, '/jXcontrol/slider');
 // Bus selection for Sample Recording
 OSCdef(\inputSource, {|msg, time, addr, port|
-	var sourceNo = (msg[1]*127).floor.postln;
+	var sourceNo = (msg[1]*127).floor;
 	if ((msg[1]*127).floor == 36)
 	{ ~currentInputSource = ~inch1; ("Audio source selected: "++~currentInputSource).postln };
 	if ((msg[1]*127).floor == 108)
@@ -308,23 +293,6 @@ OSCdef(\inputSource, {|msg, time, addr, port|
 		("SAMPLE NOT RECORDED YET! Selected default file: "++~currentFile).postln;
 	};
 	~playBuff = Buffer.read(s, ~currentFile.standardizePath);
-
-/*	switch (sampleNo)
-		{1} {~playBuff1 = Buffer.read(s, ~currentFile.standardizePath)}
-		{2} {~playBuff2 = Buffer.read(s, ~currentFile.standardizePath)}
-		{3} {~playBuff3 = Buffer.read(s, ~currentFile.standardizePath)}
-		{4} {~playBuff4 = Buffer.read(s, ~currentFile.standardizePath)}
-		{5} {~playBuff5 = Buffer.read(s, ~currentFile.standardizePath)}
-		{6} {~playBuff6 = Buffer.read(s, ~currentFile.standardizePath)};
-
-		{1} {~playBuff1 = Buffer.read(s, ~currentFile.standardizePath).normalize }
-		{2} {~playBuff2 = Buffer.read(s, ~currentFile.standardizePath).normalize }
-		{3} {~playBuff3 = Buffer.read(s, ~currentFile.standardizePath).normalize }
-		{4} {~playBuff4 = Buffer.read(s, ~currentFile.standardizePath).normalize }
-		{5} {~playBuff5 = Buffer.read(s, ~currentFile.standardizePath).normalize }
-		{6} {~playBuff6 = Buffer.read(s, ~currentFile.standardizePath).normalize };
-*/
-	~currentSampleNo = sampleNo;
 	// show waveshape in lobotomixGUI file viewer
 	{ ~x3d_updateSoundFile.value(~currentFile.standardizePath) }.defer;
 };
@@ -371,54 +339,39 @@ OSCdef(\selsample6, {|msg, time, addr, port|
 	} },
 	'/jXcontrol/9'
 );
-// perform startup on first clik and fx 1 on/off
+// perform fx 1 on/off
 ~fx1func = {|in|
-	if (~startup) {
-		"Starting default Synths and values mapping.......".postln;
-		~pitchshifter = Synth.new(\picthShifter,
-			[\inBus, ~pitchBus, \pshift, 2.3, \outBus, ~mute],~efxGroup, addAction: \addToHead);
-		~delay = Synth.new(\deldelay,
-			[\inBus, ~delayBus, \outBus, ~mute, \delaytime, 0.2],~efxGroup,addAction: \addToTail);
-		~compressor = Synth(\compressor, [\inbus, ~compBus], ~efxGroup, \addToTail);
-		~mixer = Synth.new(\mixer, [\inBus, ~sampleOut, \outBus, ~compBus],~sampleGroup, addAction: \addToTail);
-		~startup = false;
-		~pitchshifter.map(\pshift, ~pitchRatio);
-//		~fxCount = 0;
+	if (in==1) {
+		if (~fx1 == 1) {
+			~fxCount = ~fxCount - 1;
+			if (~fx2 == 0) {
+				~mixer.set(\outBus, ~compBus);
+			} {
+				~mixer.set(\outBus, ~delayBus);
+			};
+			~pitchshifter.set(\outBus, ~mute);
+			"FX 1 (pitch shifter) off!".postln;
+			~fxCount.postln;
+			~fx1 = 0;
+		}
 	} {
-		if (in==1) {
-			if (~fx1 == 1) {
-				~fxCount = ~fxCount - 1;
-				if (~fx2 == 0) {
-					~mixer.set(\outBus, ~compBus);
-				} {
-					~mixer.set(\outBus, ~delayBus);
-				};
-				~pitchshifter.set(\outBus, ~mute);
-				"FX 1 (pitch shifter) off!".postln;
-				~fxCount.postln;
-				~fx1 = 0;
-			}
-		} {
-			if (~fx1 != 1) {
-				~fxCount = ~fxCount + 1;
-//				~mixer.set(\inBus, ~fxBus);
-				~mixer.set(\outBus, ~pitchBus);
-				if (~fx2==0) {
-					~pitchshifter.set(\outBus, ~compBus);
-				} {
-					~pitchshifter.set(\outBus, ~delayBus);
-				};
-				"FX 1 (pitch shifter) on!".postln;
-				~fxCount.postln;
-				~fx1 = 1;
-			}
+		if (~fx1 != 1) {
+			~fxCount = ~fxCount + 1;
+			//				~mixer.set(\inBus, ~fxBus);
+			~mixer.set(\outBus, ~pitchBus);
+			if (~fx2==0) {
+				~pitchshifter.set(\outBus, ~compBus);
+			} {
+				~pitchshifter.set(\outBus, ~delayBus);
+			};
+			"FX 1 (pitch shifter) on!".postln;
+			~fxCount.postln;
+			~fx1 = 1;
 		};
 	};
 };
 OSCdef(\fx1, {|msg, time, addr, port|
-
 	~fx1func.value(msg[1]);
-
 }, '/jXcontrol/fx1');
 // second fx
 ~fx2func = {|in|
@@ -452,17 +405,13 @@ OSCdef(\fx1, {|msg, time, addr, port|
 	};
 };
 OSCdef(\fx2, {|msg, time, addr, port|
-
 	~fx2func.value(msg[1]);
-
 }, '/jXcontrol/fx2');
 // third fx
 OSCdef(\fx3, {|msg, time, addr, port|
 
 	var thisBuf;
 	msg[1].postln; 	// Type new code here
-	// ~sampleSelection.value(~currentSampleNo);
-	// add grainBuf here
 	// insert a gentle fade out when switch off the instrument
 	if (~loop==0) {
 		~loop = 1;
@@ -482,6 +431,16 @@ OSCdef(\fx4, {|msg, time, addr, port|
 
 
 }, '/jXcontrol/fx4');
+~startup = {
+	"Starting default Synths and values mapping.......".postln;
+	~pitchshifter = Synth.new(\picthShifter,
+		[\inBus, ~pitchBus, \pshift, 2.3, \outBus, ~mute],~efxGroup, addAction: \addToHead);
+	~delay = Synth.new(\deldelay,
+		[\inBus, ~delayBus, \outBus, ~mute, \delaytime, 0.2],~efxGroup,addAction: \addToTail);
+	~compressor = Synth(\compressor, [\inbus, ~compBus], ~efxGroup, \addToTail);
+	~mixer = Synth.new(\mixer, [\inBus, ~sampleOut, \outBus, ~compBus],~sampleGroup, addAction: \addToTail);
+	~pitchshifter.map(\pshift, ~pitchRatio);
+};
 // select sample folder
 ~changeFolder = {|folder, ext|
 ~currentFolder = "~/x3dLooper/"++folder++"/";
@@ -491,4 +450,3 @@ OSCdef(\fx4, {|msg, time, addr, port|
 ~ext = ext;
 ~ext.postln;
 };
-)

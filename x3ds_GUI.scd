@@ -359,6 +359,7 @@ s.meter;
 	.timeCursorOn_(true)
 	.timeCursorColor_(Color.red);
 
+	// efault set to 1 in startup
 	~x3d_externalSample = Button(~x3dView, Rect(390,22,90,20))
 	.states_([["Internal src",Color.black,Color.white],
 		["External src",Color.black,Color.red]]);
@@ -530,10 +531,3 @@ s.meter;
 			, { "folder does not exists!".postln });
 	});
 };
-
-
-
-~grainbuff_guiCreator.value(3, "GrainBuff", ~loboMain);
-~x3d_guiCreator.value("x3d Looper", ~loboMain);
-~tapTempoGuiCreator.value("", ~loboMain);
-~lobo_score.value("score",~loboMain, Color.black);
