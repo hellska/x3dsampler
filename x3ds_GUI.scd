@@ -74,7 +74,7 @@ s.meter;
 ~lobo_CurrentSoundFileList = ~bufDrumkit;
 //// List the available sound file lists
 ~lobo_Popup = PopUpMenu(~loboMain, Rect(280, 38, 150, 22))
-.items_(["Drum kit", "Tic Gaber", "900 voices", "Tzunami"])
+.items_(["Drum kit", "Tic Gaber", "900 voices", "Tzunami", "BLO"])
 .action_({|me| me.value.postln;
 	switch (me.value,
 		0, { ~setListViewContent.value(~bufDrumkit);
@@ -88,6 +88,9 @@ s.meter;
 		},
 		3, {  ~setListViewContent.value(~tzunami);
 			~lobo_CurrentSoundFileList = ~tzunami;
+		},
+		4, {  ~setListViewContent.value(~blo_samples);
+			~lobo_CurrentSoundFileList = ~blo_samples;
 		}
 	);
 });
@@ -387,6 +390,10 @@ s.meter;
 		{me.value==0} { ~loop = 0 }
 		{me.value==1} { ~loop = 1 }
 	};
+	~x3d_pitchfx = Button(~x3dView, Rect(390, 82, 90, 20))
+	.states_([["PitchShift", Color.black, Color.gray],["PitchShift", Color.black, Color.red]]);
+	~x3d_delayfx = Button(~x3dView, Rect(490, 82, 90, 20))
+	.states_([["Delay", Color.black, Color.gray],["Delay", Color.black, Color.red]]);
 	// recording viewer - show if recording and sample number
 	~x3d_rec_viewer = StaticText(~x3dView, Rect(400,160,170,30))
 	.string_(~x3d_rec_string)

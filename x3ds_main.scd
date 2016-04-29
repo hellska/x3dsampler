@@ -173,15 +173,15 @@ SynthDef.new(\granulaSample, {
 	r.close;
 	r.free;
 };
-~play_array = Array.fill(25,0);
-~play_array_element = 0;
+~x3d_play_array = Array.fill(25,0);
+~x3d_play_array_element = 0;
 ~play = {|buffer, startPos, time|
 	if (~setup==2){
 		if (~loop==1) { // behaviour when loop is set
-			if (~play_array_element<~x3d_loop_number) {
-				~play_array.put(~play_array_element,Synth.new(\playLoop, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
-				{ ~x3d_loop_buttons_array[~play_array_element].value_(1);
-					~play_array_element = ~play_array_element + 1; }.defer;
+			if (~x3d_play_array_element<~x3d_loop_number) {
+				~x3d_play_array.put(~x3d_play_array_element,Synth.new(\playLoop, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
+				{ ~x3d_loop_buttons_array[~x3d_play_array_element].value_(1);
+					~x3d_play_array_element = ~x3d_play_array_element + 1; }.defer;
 				"added new element".postln;
 			} {
 				"No other loop permitted!".postln;
@@ -191,7 +191,7 @@ SynthDef.new(\granulaSample, {
 		};
 	};
 	if (~setup==4){
-		Synth.new(\play4, [\bufnum, buffer, \start, startPos, \xpos, ~panpot, \ypos, ~panpotY, \outBus, ~sampleOut,\loop, ~loop],~sampleGroup, addAction: \addToHead);
+		Synth.new(\play4, [\bufnum, buffer, \start, startPos, \xpos, ~panpot, \ypos, ~panpotY, \outBus, ~sampleOut,\loop, ~loop, \time, time],~sampleGroup, addAction: \addToHead);
 	}
 };
 // end of Synth Def
@@ -351,6 +351,7 @@ OSCdef(\selsample6, {|msg, time, addr, port|
 			};
 			~pitchshifter.set(\outBus, ~mute);
 			"FX 1 (pitch shifter) off!".postln;
+			{ ~x3d_pitchfx.value = 0 }.defer;
 			~fxCount.postln;
 			~fx1 = 0;
 		}
@@ -365,6 +366,7 @@ OSCdef(\selsample6, {|msg, time, addr, port|
 				~pitchshifter.set(\outBus, ~delayBus);
 			};
 			"FX 1 (pitch shifter) on!".postln;
+			{ ~x3d_pitchfx.value = 1 }.defer;
 			~fxCount.postln;
 			~fx1 = 1;
 		};
@@ -386,6 +388,7 @@ OSCdef(\fx1, {|msg, time, addr, port|
 		};
 		~delay.set(\outBus, ~mute);
 		"FX 2 (delay) off!".postln;
+		{ ~x3d_delayfx.value = 0 }.defer;
 		~fxCount.postln;
 		~fx2 = 0;
 	} {
@@ -400,6 +403,7 @@ OSCdef(\fx1, {|msg, time, addr, port|
 			~delay.set(\outBus, ~compBus);
 		};
 		"FX 2 (delay) on!".postln;
+		{ ~x3d_delayfx.value = 1 }.defer;
 		~fxCount.postln;
 		~fx2 = 1;
 	};

@@ -21,7 +21,15 @@
 ~x3d_guiCreator.value("x3d Looper", ~loboMain);
 ~tapTempoGuiCreator.value("", ~loboMain);
 // ~lobo_score.value("score",~loboMain, Color.black);
-~x3d_loops_win_maker.value;
+// ~x3d_loops_win_maker.value;
 ~startup.value();
 // ~x3d_externalSample.value_(1);
 )
+
+s.meter
+
+63
+
+
+38.midicps
+55.midicps
