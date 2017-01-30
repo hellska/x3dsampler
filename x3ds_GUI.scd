@@ -70,29 +70,19 @@ s.meter;
 	}
 });
 // populate the list with the default soundFile buffer
-~setListViewContent.value(~bufDrumkit);
-~lobo_CurrentSoundFileList = ~bufDrumkit;
-//// List the available sound file lists
+~lobo_CurrentSoundFileList = SoundFile.collect(path: "/Volumes/ssdData/soundsAndSamples/Industrial-autoprodotti/*".standardizePath);
+~setListViewContent.value(~lobo_CurrentSoundFileList);
 ~lobo_Popup = PopUpMenu(~loboMain, Rect(280, 38, 150, 22))
-.items_(["Drum kit", "Tic Gaber", "900 voices", "Tzunami", "BLO"])
-.action_({|me| me.value.postln;
-	switch (me.value,
-		0, { ~setListViewContent.value(~bufDrumkit);
-			~lobo_CurrentSoundFileList = ~bufDrumkit;
-		},
-		1, { ~setListViewContent.value(~ticGaber);
-			~lobo_CurrentSoundFileList = ~ticGaber;
-		},
-		2, { ~setListViewContent.value(~mwvoices900);
-			~lobo_CurrentSoundFileList = ~mwvoices900;
-		},
-		3, {  ~setListViewContent.value(~tzunami);
-			~lobo_CurrentSoundFileList = ~tzunami;
-		},
-		4, {  ~setListViewContent.value(~blo_samples);
-			~lobo_CurrentSoundFileList = ~blo_samples;
-		}
-	);
+.items_(["Industrial-autoprodotti", "tic_gaber", "900-marghera-workers-voices", "tzunami", "BLO", "planb", "convertedwav", ])
+.action_({|me|
+	var path, basepath;
+	basepath = "/Volumes/ssdData/soundsAndSamples/";
+	if ( me.item == "planb" , { basepath = "/Volumes/ssdData/infiniteorchestra/"; });
+	if ( me.item == "convertedwav", { basepath = "/Volumes/ssdData/infiniteorchestra/"; });
+	path = basepath++me.item++"/*";
+	("Load audio files from: "+path).postln;
+	~lobo_CurrentSoundFileList = SoundFile.collectIntoBuffers(path.standardizePath);
+	~setListViewContent.value(~lobo_CurrentSoundFileList);
 });
 //// Create and populate the text view for soundfile info
 ~ticInfo = TextView(~loboMain, Rect(80, 165, 600, 100))
