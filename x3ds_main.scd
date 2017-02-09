@@ -173,15 +173,15 @@ SynthDef.new(\granulaSample, {
 	r.close;
 	r.free;
 };
-~x3d_play_array = Array.fill(25,0);
-~x3d_play_array_element = 0;
+~play_array = Array.fill(25,0);
+~play_array_element = 0;
 ~play = {|buffer, startPos, time|
 	if (~setup==2){
 		if (~loop==1) { // behaviour when loop is set
-			if (~x3d_play_array_element<~x3d_loop_number) {
-				~x3d_play_array.put(~x3d_play_array_element,Synth.new(\playLoop, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
-				{ ~x3d_loop_buttons_array[~x3d_play_array_element].value_(1);
-					~x3d_play_array_element = ~x3d_play_array_element + 1; }.defer;
+			if (~play_array_element<~x3d_loop_number) {
+				~play_array.put(~play_array_element,Synth.new(\playLoop, [\bufnum, buffer, \start, startPos, \panpot, ~panpot, \outBus, ~sampleOut, \loop, ~loop],~sampleGroup, addAction: \addToHead));
+				{ ~x3d_loop_buttons_array[~play_array_element].value_(1);
+					~play_array_element = ~play_array_element + 1; }.defer;
 				"added new element".postln;
 			} {
 				"No other loop permitted!".postln;
@@ -205,7 +205,7 @@ OSCdef(\play, {|msg, time, addr, port|
 		var time;
 		time = (~playBuff.numFrames - ~startPos) / 44100;
 		time = time * ~timescale;
-		time.postln;
+		//time.postln;
 		~play.value(~playBuff, ~startPos, time);
 	};
  },
